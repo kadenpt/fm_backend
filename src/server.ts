@@ -11,6 +11,12 @@ import seed from "./db/seed";
 
 import health from "./routes/health";
 import users from "./routes/users";
+import exercises from "./routes/exercises";
+import userExercises from "./routes/userExercises";
+import journals from "./routes/journals";
+import messages from "./routes/messages";
+import habitGoals from "./routes/habitGoals";
+import habits from "./routes/habits";
 
 const PORT = process.env.PORT || 5050;
 const app = express();
@@ -22,6 +28,12 @@ const api = Router();
 
 api.use("/health", health);
 api.use("/users", users);
+api.use("/exercises", exercises);
+api.use("/userExercises", userExercises);
+api.use("/journals", journals);
+api.use("/messages", messages);
+api.use("/habitGoals", habitGoals);
+api.use("/habits", habits);
 
 app.use("/api", api);
 
