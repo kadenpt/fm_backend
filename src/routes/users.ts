@@ -9,7 +9,7 @@ const router = Router();
 router.post("/", async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await pool.query("INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING *", [name, email, hashedPassword]);
+  const user = await pool.query("INSERT INTO users (first_name, email, password_hash) VALUES ($1, $2, $3) RETURNING *", [name, email, hashedPassword]);
   res.json(user.rows[0]);
 });
 
