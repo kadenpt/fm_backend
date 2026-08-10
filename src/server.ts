@@ -10,6 +10,7 @@ import runMigrations from "./db/migrate";
 import seed from "./db/seed";
 
 import health from "./routes/health";
+import auth from "./routes/auth";
 import users from "./routes/users";
 import exercises from "./routes/exercises";
 import userExercises from "./routes/userExercises";
@@ -27,6 +28,7 @@ app.use(express.json());
 const api = Router();
 
 api.use("/health", health);
+api.use("/auth", auth);
 api.use("/users", users);
 api.use("/exercises", exercises);
 api.use("/userExercises", userExercises);
