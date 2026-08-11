@@ -8,6 +8,7 @@ import { Router } from "express";
 import pool from "./db/connection";
 import runMigrations from "./db/migrate";
 import seed from "./db/seed";
+import { requireAuth } from "./middleware/requireAuth";
 
 import health from "./routes/health";
 import auth from "./routes/auth";
@@ -29,13 +30,13 @@ const api = Router();
 
 api.use("/health", health);
 api.use("/auth", auth);
-api.use("/users", users);
-api.use("/exercises", exercises);
-api.use("/userExercises", userExercises);
-api.use("/journals", journals);
-api.use("/messages", messages);
-api.use("/habitGoals", habitGoals);
-api.use("/habits", habits);
+api.use("/users", requireAuth, users);
+api.use("/exercises", requireAuth, exercises);
+api.use("/userExercises", requireAuth, userExercises);
+api.use("/journals", requireAuth, journals);
+api.use("/messages", requireAuth, messages);
+api.use("/habitGoals", requireAuth, habitGoals);
+api.use("/habits", requireAuth, habits);
 
 app.use("/api", api);
 

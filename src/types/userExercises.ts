@@ -8,7 +8,6 @@ export type UserExercise = {
 };
 
 export type CreateUserExerciseBody = {
-  user_id: number;
   exercise_id: number;
 };
 

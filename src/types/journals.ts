@@ -7,7 +7,6 @@ export type Journal = {
 };
 
 export type CreateJournalBody = {
-  user_id: number;
   user_text: string;
 };
 

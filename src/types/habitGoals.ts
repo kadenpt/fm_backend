@@ -7,7 +7,6 @@ export type HabitGoal = {
 };
 
 export type CreateHabitGoalBody = {
-  user_id: number;
   habit_goals: unknown;
 };
 

@@ -5,10 +5,16 @@ import { Resend } from "resend";
 import pool from "../db/connection";
 import { CreateUserBody, PublicUser, User } from "../types/users";
 import { AuthMessageResponse, UserOtp, VerifyOtpBody } from "../types/auth";
+import {
+  issueTokenPair,
+  revokeRefreshToken,
+  rotateRefreshToken,
+} from "../lib/tokens";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
+const RESEND_COOLDOWN_MS = 60 * 1000;
 
 const router = Router();
 
@@ -48,6 +54,22 @@ async function createAndSendOtp(user: User): Promise<void> {
   });
 }
 
+async function isOnCooldown(userId: number): Promise<boolean> {
+  const result = await pool.query<UserOtp>(
+    `SELECT * FROM user_otp
+     WHERE user_id = $1 AND consumed_at IS NULL
+     ORDER BY id DESC
+     LIMIT 1`,
+    [userId]
+  );
+  if (!result.rows.length) {
+    return false;
+  }
+
+  const createdAt = result.rows[0].expires_at.getTime() - OTP_TTL_MS;
+  return Date.now() - createdAt < RESEND_COOLDOWN_MS;
+}
+
 // POST /api/auth/signup - Create user and send OTP
 router.post(
   "/signup",
@@ -59,9 +81,6 @@ router.post(
     }
 
     const existing = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    let user: User;
 
     if (existing.rows.length) {
       const existingUser = existing.rows[0];
@@ -69,23 +88,31 @@ router.post(
         return res.status(409).json({ message: "Email already registered" });
       }
 
-      const updated = await pool.query<User>(
-        `UPDATE users
-         SET first_name = $1, password_hash = $2, updated_at = NOW()
-         WHERE id = $3
-         RETURNING *`,
-        [first_name, hashedPassword, existingUser.id]
-      );
-      user = updated.rows[0];
-    } else {
-      const created = await pool.query<User>(
-        `INSERT INTO users (first_name, email, password_hash, email_verified)
-         VALUES ($1, $2, $3, FALSE)
-         RETURNING *`,
-        [first_name, email, hashedPassword]
-      );
-      user = created.rows[0];
+      if (await isOnCooldown(existingUser.id)) {
+        return res.status(429).json({ message: "Please wait before requesting another code" });
+      }
+
+      try {
+        await createAndSendOtp(existingUser);
+      } catch (error) {
+        console.error("Failed to send OTP email:", error);
+        return res.status(502).json({ message: "Failed to send verification email" });
+      }
+
+      return res.status(200).json({
+        ...toPublicUser(existingUser),
+        message: "Verification code resent",
+      });
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const created = await pool.query<User>(
+      `INSERT INTO users (first_name, email, password_hash, email_verified)
+       VALUES ($1, $2, $3, FALSE)
+       RETURNING *`,
+      [first_name, email, hashedPassword]
+    );
+    const user = created.rows[0];
 
     try {
       await createAndSendOtp(user);
@@ -161,8 +188,12 @@ router.post(
         [user.id]
       );
       await client.query("COMMIT");
+
+      const tokens = await issueTokenPair(verified.rows[0].id, verified.rows[0].email);
+
       return res.json({
         ...toPublicUser(verified.rows[0]),
+        ...tokens,
         message: "Email verified successfully",
       });
     } catch (error) {
@@ -194,6 +225,10 @@ router.post(
       return res.status(400).json({ message: "Email already verified" });
     }
 
+    if (await isOnCooldown(user.id)) {
+      return res.status(429).json({ message: "Please wait before requesting another code" });
+    }
+
     try {
       await createAndSendOtp(user);
       return res.json({ message: "Verification code resent" });
@@ -201,6 +236,78 @@ router.post(
       console.error("Failed to resend OTP:", error);
       return res.status(502).json({ message: "Failed to resend verification email" });
     }
+  }
+);
+
+// POST /api/auth/login - Login user
+router.post(
+  "/login",
+  async (
+    req: Request<{}, AuthMessageResponse | PublicUser, { email: string; password: string }>,
+    res: Response
+  ) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "email and password are required" });
+    }
+
+    const result = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
+    const user = result.rows[0];
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    if (!user.email_verified) {
+      return res.status(403).json({ message: "Email not verified" });
+    }
+
+    const tokens = await issueTokenPair(user.id, user.email);
+
+    return res.json({
+      ...toPublicUser(user),
+      ...tokens,
+    });
+  }
+);
+
+// POST /api/auth/refresh - Exchange refresh token for a new token pair
+router.post(
+  "/refresh",
+  async (req: Request<{}, AuthMessageResponse, { refreshToken: string }>, res: Response) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ message: "refreshToken is required" });
+    }
+
+    try {
+      const tokens = await rotateRefreshToken(refreshToken);
+      return res.json({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
+    } catch {
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+  }
+);
+
+// POST /api/auth/logout - Revoke refresh token
+router.post(
+  "/logout",
+  async (req: Request<{}, AuthMessageResponse, { refreshToken: string }>, res: Response) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ message: "refreshToken is required" });
+    }
+
+    try {
+      await revokeRefreshToken(refreshToken);
+    } catch {
+      // Ignore invalid tokens so logout stays idempotent
+    }
+
+    return res.json({ message: "Logged out successfully" });
   }
 );
 

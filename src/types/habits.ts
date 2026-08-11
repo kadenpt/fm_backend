@@ -7,7 +7,6 @@ export type Habit = {
 };
 
 export type CreateHabitBody = {
-  user_id: number;
   habits: unknown;
 };
 
