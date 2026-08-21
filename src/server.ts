@@ -29,7 +29,6 @@ app.use(express.json());
 
 const api = Router();
 
-api.use("/health", health);
 api.use("/auth", authLimiter, auth);
 api.use("/users", requireAuth, users);
 api.use("/exercises", requireAuth, exercises);
@@ -39,6 +38,7 @@ api.use("/messages", requireAuth, messages);
 api.use("/habitGoals", requireAuth, habitGoals);
 api.use("/habits", requireAuth, habits);
 
+app.use("/health", health);
 app.use("/api", apiLimiter, api);
 
 async function start() {

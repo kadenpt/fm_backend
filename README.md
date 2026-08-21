@@ -344,3 +344,20 @@ Password hashes are never returned from the API:
 | Dev server | `npm run dev` |
 | Compile | `npm run build` |
 | Production server | `npm start` |
+
+## Todos
+- Add Admin column to users table
+- Restrict certain endpoints to admin only
+- Error handling
+- Security headers + tighten CORS
+- Trust proxy (app.set("trust proxy", 1))
+- Validate env on boot
+- Request validation (zod?)
+- DB for prod (SSL, Pool settings, graceful shutdown)
+- Structured logging
+- Body size limits
+- Observability
+- Secrets hygiene
+- Migrations as deploy step
+- Skip rate limit on health
+- Password rules
