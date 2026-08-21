@@ -9,6 +9,7 @@ import pool from "./db/connection";
 import runMigrations from "./db/migrate";
 import seed from "./db/seed";
 import { requireAuth } from "./middleware/requireAuth";
+import { apiLimiter, authLimiter } from "./middleware/rateLimit";
 
 import health from "./routes/health";
 import auth from "./routes/auth";
@@ -29,7 +30,7 @@ app.use(express.json());
 const api = Router();
 
 api.use("/health", health);
-api.use("/auth", auth);
+api.use("/auth", authLimiter, auth);
 api.use("/users", requireAuth, users);
 api.use("/exercises", requireAuth, exercises);
 api.use("/userExercises", requireAuth, userExercises);
@@ -38,7 +39,7 @@ api.use("/messages", requireAuth, messages);
 api.use("/habitGoals", requireAuth, habitGoals);
 api.use("/habits", requireAuth, habits);
 
-app.use("/api", api);
+app.use("/api", apiLimiter, api);
 
 async function start() {
   await pool.query("SELECT 1");
