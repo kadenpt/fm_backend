@@ -348,7 +348,6 @@ Password hashes are never returned from the API:
 ## Todos
 - Error handling
 - Security headers + tighten CORS
-- Trust proxy (app.set("trust proxy", 1))
 - Validate env on boot
 - Request validation (zod?)
 - DB for prod (SSL, Pool settings, graceful shutdown)
