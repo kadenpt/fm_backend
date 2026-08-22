@@ -6,6 +6,7 @@ export type User = {
   password_hash: string;
   created_at: Date;
   updated_at: Date;
+  admin: boolean;
 };
 
 export type PublicUser = Omit<User, "password_hash">;

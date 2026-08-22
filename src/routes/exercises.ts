@@ -1,12 +1,14 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateExerciseBody, Exercise, UpdateExerciseBody } from "../types/exercises";
+import { requireAdmin } from "../middleware/requireAdmin";
 
 const router = Router();
 
 // POST /api/exercises - Create a new exercise
 router.post(
   "/",
+  requireAdmin,
   async (req: Request<{}, Exercise, CreateExerciseBody>, res: Response<Exercise>) => {
     const { title, exercise_description, video_url, focus, duration } = req.body;
     const exercise = await pool.query<Exercise>(
@@ -33,6 +35,7 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response<Exercise>)
 // PUT /api/exercises/:id - Update an exercise by id
 router.put(
   "/:id",
+  requireAdmin,
   async (req: Request<{ id: string }, Exercise, UpdateExerciseBody>, res: Response<Exercise>) => {
     const { id } = req.params;
     const { title, exercise_description, video_url, focus, duration } = req.body;
@@ -45,7 +48,7 @@ router.put(
 );
 
 // DELETE /api/exercises/:id - Delete an exercise by id
-router.delete("/:id", async (req: Request<{ id: string }>, res: Response<{ message: string }>) => {
+router.delete("/:id", requireAdmin, async (req: Request<{ id: string }>, res: Response<{ message: string }>) => {
   const { id } = req.params;
   await pool.query("DELETE FROM exercises WHERE id = $1", [id]);
   res.json({ message: "Exercise deleted successfully" });

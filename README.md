@@ -346,8 +346,6 @@ Password hashes are never returned from the API:
 | Production server | `npm start` |
 
 ## Todos
-- Add Admin column to users table
-- Restrict certain endpoints to admin only
 - Error handling
 - Security headers + tighten CORS
 - Trust proxy (app.set("trust proxy", 1))

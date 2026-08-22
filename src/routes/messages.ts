@@ -1,12 +1,14 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateMessageBody, Message, UpdateMessageBody } from "../types/messages";
+import { requireAdmin } from "../middleware/requireAdmin";
 
 const router = Router();
 
 // POST /api/messages - Create a new message
 router.post(
   "/",
+  requireAdmin,
   async (req: Request<{}, Message, CreateMessageBody>, res: Response<Message>) => {
     const { message_description, focus, message_type } = req.body;
     const message = await pool.query<Message>(
@@ -45,7 +47,7 @@ router.put(
 );
 
 // DELETE /api/messages/:id - Delete a message by id
-router.delete("/:id", async (req: Request<{ id: string }>, res: Response<{ message: string }>) => {
+router.delete("/:id", requireAdmin, async (req: Request<{ id: string }>, res: Response<{ message: string }>) => {
   const { id } = req.params;
   await pool.query("DELETE FROM messages WHERE id = $1", [id]);
   res.json({ message: "Message deleted successfully" });
