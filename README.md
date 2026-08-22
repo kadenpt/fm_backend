@@ -348,13 +348,11 @@ Password hashes are never returned from the API:
 ## Todos
 - Error handling
 - Security headers + tighten CORS
-- Validate env on boot
 - Request validation (zod?)
 - DB for prod (SSL, Pool settings, graceful shutdown)
 - Structured logging
 - Body size limits
-- Observability
+- Observability (Later)
 - Secrets hygiene
 - Migrations as deploy step
-- Skip rate limit on health
 - Password rules

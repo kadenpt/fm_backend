@@ -43,13 +43,23 @@ app.use("/health", health);
 app.use("/api", apiLimiter, api);
 
 async function start() {
-  await pool.query("SELECT 1");
-  await runMigrations();
-  if (process.env.NODE_ENV !== "production") {
-    await seed();
+  if (process.env.JWT_SECRET == undefined) {
+    throw new Error("JWT_SECRET is not set");
   }
-  app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-  });
+
+  try {
+    await pool.query("SELECT 1");
+    await runMigrations();
+    if (process.env.NODE_ENV !== "production") {
+      await seed();
+    }
+    app.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error(error);
+    await pool.end().catch(() => {});
+    process.exit(1);
+  }
 }
 start();
