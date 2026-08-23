@@ -32,6 +32,7 @@ app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 app.use(requestLog);
+app.use(express.json({ limit: "100kb" }));
 
 const api = Router();
 
@@ -51,6 +52,11 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ message: err.message });
   }
+
+  if (err instanceof Error && err.name === "PayloadTooLargeError") {
+    return res.status(413).json({ message: "Request body too large" });
+  }
+
   logger.error({ err }, "Unhandled error");
   return res.status(500).json({ message: "Internal server error" });
 });
