@@ -354,4 +354,3 @@ Password hashes are never returned from the API:
 - Observability (Later)
 - Secrets hygiene
 - Migrations as deploy step
-- Password rules

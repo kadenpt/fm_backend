@@ -10,6 +10,7 @@ import {
   revokeRefreshToken,
   rotateRefreshToken,
 } from "../lib/tokens";
+import { validPassword } from "../helpers/validPassword";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -78,6 +79,10 @@ router.post(
 
     if (!first_name || !email || !password) {
       return res.status(400).json({ message: "first_name, email, and password are required" });
+    }
+
+    if (!validPassword(password)) {
+      return res.status(400).json({ message: "Password must be at least 8 characters long and contain at least one special character" });
     }
 
     const existing = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
