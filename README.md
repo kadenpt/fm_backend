@@ -349,8 +349,6 @@ Password hashes are never returned from the API:
 - Security headers + tighten CORS (later - once deployed?)
 - Request validation (zod?)
 - DB for prod (SSL, Pool settings, graceful shutdown)
-- Structured logging
 - Body size limits
 - Observability (Later)
-- Secrets hygiene
 - Migrations as deploy step

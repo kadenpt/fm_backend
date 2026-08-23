@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { env } from "./config/env";
+
 import express from "express";
 import cors from "cors";
 import { NextFunction, Request, Response, Router } from "express";
@@ -24,7 +26,6 @@ import { AppError } from "./error";
 import { logger } from "./lib/logger";
 import { requestLog } from "./middleware/requestLog";
 
-const PORT = process.env.PORT || 5050;
 const app = express();
 
 app.set("trust proxy", 1);
@@ -55,18 +56,14 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 async function start() {
-  if (process.env.JWT_SECRET == undefined) {
-    throw new Error("JWT_SECRET is not set");
-  }
-
   try {
     await pool.query("SELECT 1");
     logger.info("Database connection established");
     await runMigrations();
-    if (process.env.NODE_ENV !== "production") {
+    if (env.nodeEnv !== "production") {
       await seed();
     }
-    app.listen(PORT, () => logger.info({ port: PORT }, "Server listening"));
+    app.listen(env.port, () => logger.info({ port: env.port }, "Server listening"));
   } catch (error) {
     logger.error({ err: error }, "Failed to start server");
     await pool.end().catch(() => {});

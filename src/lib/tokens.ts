@@ -2,6 +2,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import pool from "../db/connection";
+import { env } from "../config/env";
 
 export type AccessTokenPayload = {
   sub: string;
@@ -19,29 +20,13 @@ const ACCESS_TTL = "15m";
 const REFRESH_TTL = "7d";
 const REFRESH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-function getAccessSecret(): string {
-  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_ACCESS_SECRET or JWT_SECRET must be set");
-  }
-  return secret;
-}
-
-function getRefreshSecret(): string {
-  const secret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_REFRESH_SECRET or JWT_SECRET must be set");
-  }
-  return secret;
-}
-
 export function signAccessToken(userId: number, email: string): string {
   const payload: AccessTokenPayload = {
     sub: String(userId),
     email,
     typ: "access",
   };
-  return jwt.sign(payload, getAccessSecret(), { expiresIn: ACCESS_TTL });
+  return jwt.sign(payload, env.jwtAccessSecret, { expiresIn: ACCESS_TTL });
 }
 
 export async function issueRefreshToken(userId: number): Promise<string> {
@@ -51,7 +36,7 @@ export async function issueRefreshToken(userId: number): Promise<string> {
     typ: "refresh",
     jti,
   };
-  const token = jwt.sign(payload, getRefreshSecret(), { expiresIn: REFRESH_TTL });
+  const token = jwt.sign(payload, env.jwtRefreshSecret, { expiresIn: REFRESH_TTL });
   const tokenHash = await bcrypt.hash(token, 10);
   const expiresAt = new Date(Date.now() + REFRESH_TTL_MS);
 
@@ -74,7 +59,7 @@ export async function issueTokenPair(
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  const payload = jwt.verify(token, getAccessSecret()) as AccessTokenPayload;
+  const payload = jwt.verify(token, env.jwtAccessSecret) as AccessTokenPayload;
   if (payload.typ !== "access") {
     throw new Error("Invalid token type");
   }
@@ -82,7 +67,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
-  const payload = jwt.verify(token, getRefreshSecret()) as RefreshTokenPayload;
+  const payload = jwt.verify(token, env.jwtRefreshSecret) as RefreshTokenPayload;
   if (payload.typ !== "refresh") {
     throw new Error("Invalid token type");
   }

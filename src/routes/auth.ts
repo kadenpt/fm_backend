@@ -12,8 +12,9 @@ import {
 } from "../lib/tokens";
 import { validPassword } from "../helpers/validPassword";
 import { logger } from "../lib/logger";
+import { env } from "../config/env";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(env.resendApiKey);
 const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -44,11 +45,7 @@ async function createAndSendOtp(user: User): Promise<void> {
     [user.id, codeHash, expiresAt]
   );
 
-  const from = process.env.RESEND_FROM_EMAIL;
-  if (!process.env.RESEND_API_KEY || !from) {
-    throw new Error("RESEND_API_KEY and RESEND_FROM_EMAIL must be set");
-  }
-
+  const from = env.resendFromEmail;
   await resend.emails.send({
     from,
     to: user.email,
