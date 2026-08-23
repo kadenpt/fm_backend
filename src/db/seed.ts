@@ -1,11 +1,12 @@
 import pool from "./connection";
 import fs from "fs";
 import path from "path";
+import { logger } from "../lib/logger";
 
 const seedsDir = path.join(process.cwd(), "seeds");
 
 export default async function seed() {
-  console.log("Seeding database...");
+  logger.info("Seeding database...");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS seeds (
@@ -26,13 +27,13 @@ export default async function seed() {
 
   for (const file of files) {
     if (applied.has(file)) {
-      console.log(`Skipping seed ${file}`);
+      logger.info(`Skipping seed ${file}`);
       continue;
     }
 
     const sql = fs.readFileSync(path.join(seedsDir, file), "utf8").trim();
     if (!sql) {
-      console.log(`Skipping empty seed ${file}`);
+      logger.info(`Skipping empty seed ${file}`);
       continue;
     }
 
@@ -42,7 +43,7 @@ export default async function seed() {
       await client.query(sql);
       await client.query("INSERT INTO seeds (id) VALUES ($1)", [file]);
       await client.query("COMMIT");
-      console.log(`Seed ${file} completed`);
+      logger.info(`Seed ${file} completed`);
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -51,5 +52,5 @@ export default async function seed() {
     }
   }
 
-  console.log("Seeding completed");
+  logger.info("Seeding completed");
 }

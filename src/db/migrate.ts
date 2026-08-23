@@ -1,11 +1,12 @@
 import pool from "./connection";
 import fs from "fs";
 import path from "path";
+import { logger } from "../lib/logger";
 
 const migrationsDir = path.join(process.cwd(), "migrations");
 
 export default async function runMigrations() {
-  console.log("Running migrations...");
+  logger.info("Running migrations...");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS migrations (
@@ -26,13 +27,13 @@ export default async function runMigrations() {
 
   for (const file of files) {
     if (applied.has(file)) {
-      console.log(`Skipping migration ${file}`);
+      logger.info(`Skipping migration ${file}`);
       continue;
     }
 
     const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8").trim();
     if (!sql) {
-      console.log(`Skipping empty migration ${file}`);
+      logger.info(`Skipping empty migration ${file}`);
       continue;
     }
 
@@ -42,7 +43,7 @@ export default async function runMigrations() {
       await client.query(sql);
       await client.query("INSERT INTO migrations (id) VALUES ($1)", [file]);
       await client.query("COMMIT");
-      console.log(`Migration ${file} completed`);
+      logger.info(`Migration ${file} completed`);
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -51,5 +52,5 @@ export default async function runMigrations() {
     }
   }
 
-  console.log("Migrations completed");
+  logger.info("Migrations completed");
 }

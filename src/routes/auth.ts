@@ -11,6 +11,7 @@ import {
   rotateRefreshToken,
 } from "../lib/tokens";
 import { validPassword } from "../helpers/validPassword";
+import { logger } from "../lib/logger";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -29,6 +30,7 @@ function generateOtpCode(): string {
 }
 
 async function createAndSendOtp(user: User): Promise<void> {
+  logger.info({ userId: user.id }, "Creating and sending OTP");
   const code = generateOtpCode();
   const codeHash = await bcrypt.hash(code, 10);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
@@ -53,6 +55,8 @@ async function createAndSendOtp(user: User): Promise<void> {
     subject: "Your verification code",
     text: `Your verification code is ${code}. It expires in 10 minutes.`,
   });
+
+  logger.info({ userId: user.id }, "OTP created and sent");
 }
 
 async function isOnCooldown(userId: number): Promise<boolean> {
@@ -99,8 +103,9 @@ router.post(
 
       try {
         await createAndSendOtp(existingUser);
+        logger.info({ userId: existingUser.id }, "OTP resent");
       } catch (error) {
-        console.error("Failed to send OTP email:", error);
+        logger.error({ err: error, userId: existingUser.id }, "Failed to send OTP email");
         return res.status(502).json({ message: "Failed to send verification email" });
       }
 
@@ -122,7 +127,7 @@ router.post(
     try {
       await createAndSendOtp(user);
     } catch (error) {
-      console.error("Failed to send OTP email:", error);
+      logger.error({ err: error, userId: user.id }, "Failed to send OTP email");
       return res.status(502).json({ message: "Failed to send verification email" });
     }
 
@@ -236,9 +241,10 @@ router.post(
 
     try {
       await createAndSendOtp(user);
+      logger.info({ userId: user.id }, "OTP resent");
       return res.json({ message: "Verification code resent" });
     } catch (error) {
-      console.error("Failed to resend OTP:", error);
+      logger.error({ err: error, userId: user.id }, "Failed to resend OTP");
       return res.status(502).json({ message: "Failed to resend verification email" });
     }
   }

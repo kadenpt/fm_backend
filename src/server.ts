@@ -21,13 +21,16 @@ import messages from "./routes/messages";
 import habitGoals from "./routes/habitGoals";
 import habits from "./routes/habits";
 import { AppError } from "./error";
+import { logger } from "./lib/logger";
+import { requestLog } from "./middleware/requestLog";
 
 const PORT = process.env.PORT || 5050;
 const app = express();
 
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
-app.set("trust proxy", 1);
+app.use(requestLog);
 
 const api = Router();
 
@@ -47,7 +50,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ message: err.message });
   }
-  console.error(err);
+  logger.error({ err }, "Unhandled error");
   return res.status(500).json({ message: "Internal server error" });
 });
 
@@ -58,15 +61,14 @@ async function start() {
 
   try {
     await pool.query("SELECT 1");
+    logger.info("Database connection established");
     await runMigrations();
     if (process.env.NODE_ENV !== "production") {
       await seed();
     }
-    app.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT}`);
-    });
+    app.listen(PORT, () => logger.info({ port: PORT }, "Server listening"));
   } catch (error) {
-    console.error(error);
+    logger.error({ err: error }, "Failed to start server");
     await pool.end().catch(() => {});
     process.exit(1);
   }
