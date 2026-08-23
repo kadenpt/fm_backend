@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateJournalBody, Journal, UpdateJournalBody } from "../types/journals";
+import { AppError } from "../error";
 
 const router = Router();
 
@@ -34,6 +35,9 @@ router.get(
       "SELECT * FROM journals WHERE user_id = $1 AND id = $2",
       [userId, journalId]
     );
+    if (!journal.rows.length) {
+      throw new AppError(404, "Journal not found");
+    }
     res.json(journal.rows[0]);
   }
 );
@@ -52,6 +56,9 @@ router.put(
       "UPDATE journals SET user_text = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3 RETURNING *",
       [user_text, userId, journalId]
     );
+    if (!journal.rows.length) {
+      throw new AppError(404, "Journal not found");
+    }
     res.json(journal.rows[0]);
   }
 );
@@ -62,7 +69,13 @@ router.delete(
   async (req: Request<{ journalId: string }>, res: Response<{ message: string }>) => {
     const userId = req.user!.id;
     const { journalId } = req.params;
-    await pool.query("DELETE FROM journals WHERE user_id = $1 AND id = $2", [userId, journalId]);
+    const result = await pool.query("DELETE FROM journals WHERE user_id = $1 AND id = $2", [
+      userId,
+      journalId,
+    ]);
+    if (!result.rowCount) {
+      throw new AppError(404, "Journal not found");
+    }
     res.json({ message: "Journal deleted successfully" });
   }
 );

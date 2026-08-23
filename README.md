@@ -346,7 +346,6 @@ Password hashes are never returned from the API:
 | Production server | `npm start` |
 
 ## Todos
-- Error handling
 - Security headers + tighten CORS
 - Request validation (zod?)
 - DB for prod (SSL, Pool settings, graceful shutdown)

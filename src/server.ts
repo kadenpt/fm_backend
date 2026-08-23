@@ -3,7 +3,7 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 
 import pool from "./db/connection";
 import runMigrations from "./db/migrate";
@@ -20,6 +20,7 @@ import journals from "./routes/journals";
 import messages from "./routes/messages";
 import habitGoals from "./routes/habitGoals";
 import habits from "./routes/habits";
+import { AppError } from "./error";
 
 const PORT = process.env.PORT || 5050;
 const app = express();
@@ -41,6 +42,14 @@ api.use("/habits", requireAuth, habits);
 
 app.use("/health", health);
 app.use("/api", apiLimiter, api);
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({ message: err.message });
+  }
+  console.error(err);
+  return res.status(500).json({ message: "Internal server error" });
+});
 
 async function start() {
   if (process.env.JWT_SECRET == undefined) {

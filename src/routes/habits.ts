@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateHabitBody, Habit, UpdateHabitBody } from "../types/habits";
+import { AppError } from "../error";
 
 const router = Router();
 
@@ -30,6 +31,9 @@ router.get("/:habitId", async (req: Request<{ habitId: string }>, res: Response<
     userId,
     habitId,
   ]);
+  if (!habit.rows.length) {
+    throw new AppError(404, "Habit not found");
+  }
   res.json(habit.rows[0]);
 });
 
@@ -44,6 +48,9 @@ router.put(
       "UPDATE habits SET habits = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3 RETURNING *",
       [habits, userId, habitId]
     );
+    if (!habit.rows.length) {
+      throw new AppError(404, "Habit not found");
+    }
     res.json(habit.rows[0]);
   }
 );
@@ -54,7 +61,13 @@ router.delete(
   async (req: Request<{ habitId: string }>, res: Response<{ message: string }>) => {
     const userId = req.user!.id;
     const { habitId } = req.params;
-    await pool.query("DELETE FROM habits WHERE user_id = $1 AND id = $2", [userId, habitId]);
+    const result = await pool.query("DELETE FROM habits WHERE user_id = $1 AND id = $2", [
+      userId,
+      habitId,
+    ]);
+    if (!result.rowCount) {
+      throw new AppError(404, "Habit not found");
+    }
     res.json({ message: "Habit deleted successfully" });
   }
 );

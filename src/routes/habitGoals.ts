@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateHabitGoalBody, HabitGoal, UpdateHabitGoalBody } from "../types/habitGoals";
+import { AppError } from "../error";
 
 const router = Router();
 
@@ -37,6 +38,9 @@ router.get(
       "SELECT * FROM habit_goals WHERE user_id = $1 AND id = $2",
       [userId, habitGoalId]
     );
+    if (!habitGoal.rows.length) {
+      throw new AppError(404, "Habit goal not found");
+    }
     res.json(habitGoal.rows[0]);
   }
 );
@@ -55,6 +59,9 @@ router.put(
       "UPDATE habit_goals SET habit_goals = $1, updated_at = NOW() WHERE user_id = $2 AND id = $3 RETURNING *",
       [habit_goals, userId, habitGoalId]
     );
+    if (!habitGoal.rows.length) {
+      throw new AppError(404, "Habit goal not found");
+    }
     res.json(habitGoal.rows[0]);
   }
 );
@@ -65,10 +72,13 @@ router.delete(
   async (req: Request<{ habitGoalId: string }>, res: Response<{ message: string }>) => {
     const userId = req.user!.id;
     const { habitGoalId } = req.params;
-    await pool.query("DELETE FROM habit_goals WHERE user_id = $1 AND id = $2", [
+    const result = await pool.query("DELETE FROM habit_goals WHERE user_id = $1 AND id = $2", [
       userId,
       habitGoalId,
     ]);
+    if (!result.rowCount) {
+      throw new AppError(404, "Habit goal not found");
+    }
     res.json({ message: "Habit goal deleted successfully" });
   }
 );

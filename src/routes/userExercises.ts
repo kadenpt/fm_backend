@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateUserExerciseBody, UserExercise } from "../types/userExercises";
+import { AppError } from "../error";
 
 const router = Router();
 
@@ -38,6 +39,9 @@ router.get(
       "SELECT * FROM user_exercises WHERE user_id = $1 AND exercise_id = $2",
       [userId, exerciseId]
     );
+    if (!userExercise.rows.length) {
+      throw new AppError(404, "User exercise not found");
+    }
     res.json(userExercise.rows[0]);
   }
 );
@@ -55,6 +59,9 @@ router.put(
        RETURNING *`,
       [userId, exerciseId]
     );
+    if (!userExercise.rows.length) {
+      throw new AppError(404, "User exercise not found");
+    }
     res.json(userExercise.rows[0]);
   }
 );
@@ -65,10 +72,13 @@ router.delete(
   async (req: Request<{ exerciseId: string }>, res: Response<{ message: string }>) => {
     const userId = req.user!.id;
     const { exerciseId } = req.params;
-    await pool.query("DELETE FROM user_exercises WHERE user_id = $1 AND exercise_id = $2", [
-      userId,
-      exerciseId,
-    ]);
+    const result = await pool.query(
+      "DELETE FROM user_exercises WHERE user_id = $1 AND exercise_id = $2",
+      [userId, exerciseId]
+    );
+    if (!result.rowCount) {
+      throw new AppError(404, "User exercise not found");
+    }
     res.json({ message: "User exercise deleted successfully" });
   }
 );

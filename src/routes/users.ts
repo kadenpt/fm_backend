@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import bcrypt from "bcrypt";
 import { PublicUser, UpdateUserBody, User } from "../types/users";
+import { AppError } from "../error";
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.get("/me", async (req: Request, res: Response) => {
   const userId = req.user!.id;
   const user = await pool.query<User>("SELECT * FROM users WHERE id = $1", [userId]);
   if (!user.rows.length) {
-    return res.status(404).json({ message: "User not found" });
+    throw new AppError(404, "User not found");
   }
   return res.json(toPublicUser(user.rows[0]));
 });
@@ -27,7 +28,7 @@ router.put("/me", async (req: Request<{}, PublicUser, UpdateUserBody>, res: Resp
 
   const existing = await pool.query<User>("SELECT * FROM users WHERE id = $1", [userId]);
   if (!existing.rows.length) {
-    return res.status(404).json({ message: "User not found" });
+    throw new AppError(404, "User not found");
   }
 
   const current = existing.rows[0];
@@ -51,7 +52,10 @@ router.put("/me", async (req: Request<{}, PublicUser, UpdateUserBody>, res: Resp
 // DELETE /api/users/me - Delete the authenticated user
 router.delete("/me", async (req: Request, res: Response<{ message: string }>) => {
   const userId = req.user!.id;
-  await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+  const result = await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+  if (!result.rowCount) {
+    throw new AppError(404, "User not found");
+  }
   return res.json({ message: "User deleted successfully" });
 });
 

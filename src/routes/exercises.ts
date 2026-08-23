@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import pool from "../db/connection";
 import { CreateExerciseBody, Exercise, UpdateExerciseBody } from "../types/exercises";
 import { requireAdmin } from "../middleware/requireAdmin";
+import { AppError } from "../error";
 
 const router = Router();
 
@@ -29,6 +30,9 @@ router.get("/", async (_req: Request, res: Response<Exercise[]>) => {
 router.get("/:id", async (req: Request<{ id: string }>, res: Response<Exercise>) => {
   const { id } = req.params;
   const exercise = await pool.query<Exercise>("SELECT * FROM exercises WHERE id = $1", [id]);
+  if (!exercise.rows.length) {
+    throw new AppError(404, "Exercise not found");
+  }
   res.json(exercise.rows[0]);
 });
 
@@ -43,15 +47,25 @@ router.put(
       "UPDATE exercises SET title = $1, exercise_description = $2, video_url = $3, focus = $4, duration = $5 WHERE id = $6 RETURNING *",
       [title, exercise_description, video_url ?? null, focus ?? null, duration ?? null, id]
     );
+    if (!exercise.rows.length) {
+      throw new AppError(404, "Exercise not found");
+    }
     res.json(exercise.rows[0]);
   }
 );
 
 // DELETE /api/exercises/:id - Delete an exercise by id
-router.delete("/:id", requireAdmin, async (req: Request<{ id: string }>, res: Response<{ message: string }>) => {
-  const { id } = req.params;
-  await pool.query("DELETE FROM exercises WHERE id = $1", [id]);
-  res.json({ message: "Exercise deleted successfully" });
-});
+router.delete(
+  "/:id",
+  requireAdmin,
+  async (req: Request<{ id: string }>, res: Response<{ message: string }>) => {
+    const { id } = req.params;
+    const result = await pool.query("DELETE FROM exercises WHERE id = $1", [id]);
+    if (!result.rowCount) {
+      throw new AppError(404, "Exercise not found");
+    }
+    res.json({ message: "Exercise deleted successfully" });
+  }
+);
 
 export default router;
