@@ -1,8 +1,15 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
-import { CreateExerciseBody, Exercise, UpdateExerciseBody } from "../types/exercises";
+import { Exercise } from "../types/exercises";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { AppError } from "../error";
+import { validateBody } from "../middleware/validate";
+import {
+  createExerciseBodySchema,
+  CreateExerciseBody,
+  updateExerciseBodySchema,
+  UpdateExerciseBody,
+} from "../schemas/exercises";
 
 const router = Router();
 
@@ -10,6 +17,7 @@ const router = Router();
 router.post(
   "/",
   requireAdmin,
+  validateBody(createExerciseBodySchema),
   async (req: Request<{}, Exercise, CreateExerciseBody>, res: Response<Exercise>) => {
     const { title, exercise_description, video_url, focus, duration } = req.body;
     const exercise = await pool.query<Exercise>(
@@ -40,6 +48,7 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response<Exercise>)
 router.put(
   "/:id",
   requireAdmin,
+  validateBody(updateExerciseBodySchema),
   async (req: Request<{ id: string }, Exercise, UpdateExerciseBody>, res: Response<Exercise>) => {
     const { id } = req.params;
     const { title, exercise_description, video_url, focus, duration } = req.body;

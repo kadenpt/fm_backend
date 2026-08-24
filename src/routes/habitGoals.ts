@@ -1,13 +1,21 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
-import { CreateHabitGoalBody, HabitGoal, UpdateHabitGoalBody } from "../types/habitGoals";
+import { HabitGoal } from "../types/habitGoals";
 import { AppError } from "../error";
+import { validateBody } from "../middleware/validate";
+import {
+  createHabitGoalBodySchema,
+  CreateHabitGoalBody,
+  updateHabitGoalBodySchema,
+  UpdateHabitGoalBody,
+} from "../schemas/habitGoals";
 
 const router = Router();
 
 // POST /api/habitGoals - Create a new habit goal for the authenticated user
 router.post(
   "/",
+  validateBody(createHabitGoalBodySchema),
   async (req: Request<{}, HabitGoal, CreateHabitGoalBody>, res: Response<HabitGoal>) => {
     const userId = req.user!.id;
     const { habit_goals } = req.body;
@@ -48,6 +56,7 @@ router.get(
 // PUT /api/habitGoals/:habitGoalId - Update a habit goal for the authenticated user
 router.put(
   "/:habitGoalId",
+  validateBody(updateHabitGoalBodySchema),
   async (
     req: Request<{ habitGoalId: string }, HabitGoal, UpdateHabitGoalBody>,
     res: Response<HabitGoal>

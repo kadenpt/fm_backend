@@ -1,13 +1,19 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
-import { CreateUserExerciseBody, UserExercise } from "../types/userExercises";
+import { UserExercise } from "../types/userExercises";
 import { AppError } from "../error";
+import { validateBody } from "../middleware/validate";
+import {
+  createUserExerciseBodySchema,
+  CreateUserExerciseBody,
+} from "../schemas/userExercises";
 
 const router = Router();
 
 // POST /api/userExercises - Create a new user exercise for the authenticated user
 router.post(
   "/",
+  validateBody(createUserExerciseBodySchema),
   async (req: Request<{}, UserExercise, CreateUserExerciseBody>, res: Response<UserExercise>) => {
     const userId = req.user!.id;
     const { exercise_id } = req.body;

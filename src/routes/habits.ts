@@ -1,20 +1,31 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
-import { CreateHabitBody, Habit, UpdateHabitBody } from "../types/habits";
+import { Habit } from "../types/habits";
 import { AppError } from "../error";
+import { validateBody } from "../middleware/validate";
+import {
+  createHabitBodySchema,
+  CreateHabitBody,
+  updateHabitBodySchema,
+  UpdateHabitBody,
+} from "../schemas/habits";
 
 const router = Router();
 
 // POST /api/habits - Create a new habit for the authenticated user
-router.post("/", async (req: Request<{}, Habit, CreateHabitBody>, res: Response<Habit>) => {
-  const userId = req.user!.id;
-  const { habits } = req.body;
-  const habit = await pool.query<Habit>(
-    "INSERT INTO habits (user_id, habits) VALUES ($1, $2) RETURNING *",
-    [userId, habits]
-  );
-  res.json(habit.rows[0]);
-});
+router.post(
+  "/",
+  validateBody(createHabitBodySchema),
+  async (req: Request<{}, Habit, CreateHabitBody>, res: Response<Habit>) => {
+    const userId = req.user!.id;
+    const { habits } = req.body;
+    const habit = await pool.query<Habit>(
+      "INSERT INTO habits (user_id, habits) VALUES ($1, $2) RETURNING *",
+      [userId, habits]
+    );
+    res.json(habit.rows[0]);
+  }
+);
 
 // GET /api/habits - Get all habits for the authenticated user
 router.get("/", async (req: Request, res: Response<Habit[]>) => {
@@ -40,6 +51,7 @@ router.get("/:habitId", async (req: Request<{ habitId: string }>, res: Response<
 // PUT /api/habits/:habitId - Update a habit for the authenticated user
 router.put(
   "/:habitId",
+  validateBody(updateHabitBodySchema),
   async (req: Request<{ habitId: string }, Habit, UpdateHabitBody>, res: Response<Habit>) => {
     const userId = req.user!.id;
     const { habitId } = req.params;

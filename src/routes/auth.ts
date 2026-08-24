@@ -3,16 +3,28 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { Resend } from "resend";
 import pool from "../db/connection";
-import { CreateUserBody, PublicUser, User } from "../types/users";
-import { AuthMessageResponse, UserOtp, VerifyOtpBody } from "../types/auth";
+import { PublicUser, User } from "../types/users";
+import { AuthMessageResponse, UserOtp } from "../types/auth";
 import {
   issueTokenPair,
   revokeRefreshToken,
   rotateRefreshToken,
 } from "../lib/tokens";
-import { validPassword } from "../helpers/validPassword";
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
+import { validateBody } from "../middleware/validate";
+import {
+  loginBodySchema,
+  LoginBody,
+  refreshTokenBodySchema,
+  RefreshTokenBody,
+  resendOtpBodySchema,
+  ResendOtpBody,
+  signupBodySchema,
+  SignupBody,
+  verifyOtpBodySchema,
+  VerifyOtpBody,
+} from "../schemas/auth";
 
 const resend = new Resend(env.resendApiKey);
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -75,16 +87,9 @@ async function isOnCooldown(userId: number): Promise<boolean> {
 // POST /api/auth/signup - Create user and send OTP
 router.post(
   "/signup",
-  async (req: Request<{}, AuthMessageResponse | PublicUser, CreateUserBody>, res: Response) => {
+  validateBody(signupBodySchema),
+  async (req: Request<{}, AuthMessageResponse | PublicUser, SignupBody>, res: Response) => {
     const { first_name, email, password } = req.body;
-
-    if (!first_name || !email || !password) {
-      return res.status(400).json({ message: "first_name, email, and password are required" });
-    }
-
-    if (!validPassword(password)) {
-      return res.status(400).json({ message: "Password must be at least 8 characters long and contain at least one special character" });
-    }
 
     const existing = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
 
@@ -138,12 +143,9 @@ router.post(
 // POST /api/auth/verify-otp - Verify OTP and mark email verified
 router.post(
   "/verify-otp",
+  validateBody(verifyOtpBodySchema),
   async (req: Request<{}, AuthMessageResponse | PublicUser, VerifyOtpBody>, res: Response) => {
     const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ message: "email and code are required" });
-    }
 
     const userResult = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
     if (!userResult.rows.length) {
@@ -215,12 +217,9 @@ router.post(
 // POST /api/auth/resend-otp - Resend OTP to user
 router.post(
   "/resend-otp",
-  async (req: Request<{}, AuthMessageResponse, { email: string }>, res: Response) => {
+  validateBody(resendOtpBodySchema),
+  async (req: Request<{}, AuthMessageResponse, ResendOtpBody>, res: Response) => {
     const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "email is required" });
-    }
 
     const userResult = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
     if (!userResult.rows.length) {
@@ -250,15 +249,9 @@ router.post(
 // POST /api/auth/login - Login user
 router.post(
   "/login",
-  async (
-    req: Request<{}, AuthMessageResponse | PublicUser, { email: string; password: string }>,
-    res: Response
-  ) => {
+  validateBody(loginBodySchema),
+  async (req: Request<{}, AuthMessageResponse | PublicUser, LoginBody>, res: Response) => {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "email and password are required" });
-    }
 
     const result = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
     const user = result.rows[0];
@@ -282,11 +275,9 @@ router.post(
 // POST /api/auth/refresh - Exchange refresh token for a new token pair
 router.post(
   "/refresh",
-  async (req: Request<{}, AuthMessageResponse, { refreshToken: string }>, res: Response) => {
+  validateBody(refreshTokenBodySchema),
+  async (req: Request<{}, AuthMessageResponse, RefreshTokenBody>, res: Response) => {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ message: "refreshToken is required" });
-    }
 
     try {
       const tokens = await rotateRefreshToken(refreshToken);
@@ -303,11 +294,9 @@ router.post(
 // POST /api/auth/logout - Revoke refresh token
 router.post(
   "/logout",
-  async (req: Request<{}, AuthMessageResponse, { refreshToken: string }>, res: Response) => {
+  validateBody(refreshTokenBodySchema),
+  async (req: Request<{}, AuthMessageResponse, RefreshTokenBody>, res: Response) => {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ message: "refreshToken is required" });
-    }
 
     try {
       await revokeRefreshToken(refreshToken);

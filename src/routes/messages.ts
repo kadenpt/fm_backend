@@ -1,8 +1,15 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
-import { CreateMessageBody, Message, UpdateMessageBody } from "../types/messages";
+import { Message } from "../types/messages";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { AppError } from "../error";
+import { validateBody } from "../middleware/validate";
+import {
+  createMessageBodySchema,
+  CreateMessageBody,
+  updateMessageBodySchema,
+  UpdateMessageBody,
+} from "../schemas/messages";
 
 const router = Router();
 
@@ -10,6 +17,7 @@ const router = Router();
 router.post(
   "/",
   requireAdmin,
+  validateBody(createMessageBodySchema),
   async (req: Request<{}, Message, CreateMessageBody>, res: Response<Message>) => {
     const { message_description, focus, message_type } = req.body;
     const message = await pool.query<Message>(
@@ -40,6 +48,7 @@ router.get("/:id", async (req: Request<{ id: string }>, res: Response<Message>) 
 router.put(
   "/:id",
   requireAdmin,
+  validateBody(updateMessageBodySchema),
   async (req: Request<{ id: string }, Message, UpdateMessageBody>, res: Response<Message>) => {
     const { id } = req.params;
     const { message_description, focus, message_type } = req.body;

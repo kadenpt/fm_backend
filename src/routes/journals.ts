@@ -1,20 +1,31 @@
 import { Router, Request, Response } from "express";
 import pool from "../db/connection";
-import { CreateJournalBody, Journal, UpdateJournalBody } from "../types/journals";
+import { Journal } from "../types/journals";
 import { AppError } from "../error";
+import { validateBody } from "../middleware/validate";
+import {
+  createJournalBodySchema,
+  CreateJournalBody,
+  updateJournalBodySchema,
+  UpdateJournalBody,
+} from "../schemas/journals";
 
 const router = Router();
 
 // POST /api/journals - Create a new journal for the authenticated user
-router.post("/", async (req: Request<{}, Journal, CreateJournalBody>, res: Response<Journal>) => {
-  const userId = req.user!.id;
-  const { user_text } = req.body;
-  const journal = await pool.query<Journal>(
-    "INSERT INTO journals (user_id, user_text) VALUES ($1, $2) RETURNING *",
-    [userId, user_text]
-  );
-  res.json(journal.rows[0]);
-});
+router.post(
+  "/",
+  validateBody(createJournalBodySchema),
+  async (req: Request<{}, Journal, CreateJournalBody>, res: Response<Journal>) => {
+    const userId = req.user!.id;
+    const { user_text } = req.body;
+    const journal = await pool.query<Journal>(
+      "INSERT INTO journals (user_id, user_text) VALUES ($1, $2) RETURNING *",
+      [userId, user_text]
+    );
+    res.json(journal.rows[0]);
+  }
+);
 
 // GET /api/journals - Get all journals for the authenticated user
 router.get("/", async (req: Request, res: Response<Journal[]>) => {
@@ -45,6 +56,7 @@ router.get(
 // PUT /api/journals/:journalId - Update a journal for the authenticated user
 router.put(
   "/:journalId",
+  validateBody(updateJournalBodySchema),
   async (
     req: Request<{ journalId: string }, Journal, UpdateJournalBody>,
     res: Response<Journal>
