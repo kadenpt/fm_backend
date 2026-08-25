@@ -346,7 +346,6 @@ Password hashes are never returned from the API:
 | Production server | `npm start` |
 
 ## Todos (in order)
-- DB for prod (SSL, Pool settings, graceful shutdown)
 - Migrations as deploy step
 - Security headers + tighten CORS (later - once deployed?)
 - Observability (Later)

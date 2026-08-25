@@ -30,9 +30,8 @@ const app = express();
 
 app.set("trust proxy", 1);
 app.use(cors());
-app.use(express.json());
-app.use(requestLog);
 app.use(express.json({ limit: "100kb" }));
+app.use(requestLog);
 
 const api = Router();
 
@@ -61,6 +60,7 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   return res.status(500).json({ message: "Internal server error" });
 });
 
+
 async function start() {
   try {
     await pool.query("SELECT 1");
@@ -69,7 +69,31 @@ async function start() {
     if (env.nodeEnv !== "production") {
       await seed();
     }
-    app.listen(env.port, () => logger.info({ port: env.port }, "Server listening"));
+    const server = app.listen(env.port, () => logger.info({ port: env.port }, "Server listening"));
+
+    function shutdown(signal: string) {
+      logger.info({ signal }, "Received shutdown signal");
+
+      const forceTimer = setTimeout(() => {
+        logger.error("Forced shutdown after timeout");
+        process.exit(1);
+      }, 10_000);
+      forceTimer.unref();
+
+      server.close(async () => {
+        try {
+          await pool.end();
+          logger.info("Database pool closed");
+          process.exit(0);
+        } catch (err) {
+          logger.error({ err }, "Error closing database pool");
+          process.exit(1);
+        }
+      });
+    }
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   } catch (error) {
     logger.error({ err: error }, "Failed to start server");
     await pool.end().catch(() => {});
