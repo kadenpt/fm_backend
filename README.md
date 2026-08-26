@@ -58,14 +58,14 @@ Production:
 
 ```bash
 npm run build
+npm run migrate
 npm start
 ```
 
 On startup the server:
 
 1. Checks the database connection
-2. Runs pending SQL migrations from `migrations/`
-3. Seeds data from `seeds/` when `NODE_ENV !== "production"`
+2. Seeds data from `seeds/` when `NODE_ENV !== "production"`
 
 Health check: `GET /api/health` → `{ "status": "ok" }`
 
@@ -312,7 +312,7 @@ Shared message/content catalog.
 
 ## Database
 
-Migrations run automatically on startup and are tracked in a `migrations` table.
+Migrations run using command `npm run migrate` and are tracked in a `migrations` table.
 
 | File | Purpose |
 |---|---|
@@ -344,8 +344,8 @@ Password hashes are never returned from the API:
 | Dev server | `npm run dev` |
 | Compile | `npm run build` |
 | Production server | `npm start` |
+| Run migrations | `npm run migrate` |
 
 ## Todos (in order)
-- Migrations as deploy step
 - Security headers + tighten CORS (later - once deployed?)
 - Observability (Later)

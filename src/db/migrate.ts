@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import pool from "./connection";
 import fs from "fs";
 import path from "path";
@@ -5,7 +8,7 @@ import { logger } from "../lib/logger";
 
 const migrationsDir = path.join(process.cwd(), "migrations");
 
-export default async function runMigrations() {
+async function runMigrations() {
   logger.info("Running migrations...");
 
   await pool.query(`
@@ -54,3 +57,11 @@ export default async function runMigrations() {
 
   logger.info("Migrations completed");
 }
+
+runMigrations()
+  .then(() => pool.end())
+  .then(() => process.exit(0))
+  .catch((error) => {
+    logger.error({ error }, "Error running migrations");
+    pool.end().finally(() => process.exit(1));
+  });

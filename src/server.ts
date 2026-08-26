@@ -8,7 +8,6 @@ import cors from "cors";
 import { NextFunction, Request, Response, Router } from "express";
 
 import pool from "./db/connection";
-import runMigrations from "./db/migrate";
 import seed from "./db/seed";
 import { requireAuth } from "./middleware/requireAuth";
 import { apiLimiter, authLimiter } from "./middleware/rateLimit";
@@ -65,7 +64,6 @@ async function start() {
   try {
     await pool.query("SELECT 1");
     logger.info("Database connection established");
-    await runMigrations();
     if (env.nodeEnv !== "production") {
       await seed();
     }
